@@ -7,6 +7,10 @@ local secondsRemaining = 0
 local dooropen = false
 local platingbomb = false
 local platingbombtime = 20
+local blowtorching = false
+local clearweld = false
+local dooropen = false
+local blowtorchingtime = 300
 local blipRobbery = nil
 globalcoords = nil
 globalrotation = nil
@@ -76,7 +80,45 @@ AddEventHandler('esx_holdupbank:plantingbomb', function(robb, thisbank)
 	secondsRemaining = 20
 end)
 
+RegisterNetEvent('blowtorch:startblowtorch')
+AddEventHandler('blowtorch:startblowtorch', function(source)
+	blowtorchAnimation()
+	Citizen.CreateThread(function()
+		while true do
+			if blowtorching then
+				DisableControlAction(0, 73,   true) -- LookLeftRight
+			end
+			Citizen.Wait(10)
+		end
+	end)
+end)
 
+RegisterNetEvent('blowtorch:finishclear')
+AddEventHandler('blowtorch:finishclear', function(source)
+	clearweld = false
+end)
+
+
+RegisterNetEvent('blowtorch:clearweld')
+AddEventHandler('blowtorch:clearweld', function(x,y,z)
+		--ESX.ShowNotification(' llego')
+		clearweld = true
+		Citizen.CreateThread(function()
+			while clearweld do
+				Wait(1000)
+				local weld = ESX.Game.GetClosestObject('prop_weld_torch', {x,y,z})
+				ESX.Game.DeleteObject(weld)
+			end
+		end)
+end)
+
+RegisterNetEvent('blowtorch:stopblowtorching')
+AddEventHandler('blowtorch:stopblowtorching', function()
+	blowtorching = false
+	blowtorchingtime = 0
+	ClearPedTasksImmediately(GetPlayerPed(-1))
+	ESX.ShowNotification('cancel blowtorch')
+end)
 
 function opendoors(success, timeremaining)
 	if success then
@@ -92,6 +134,23 @@ function opendoors(success, timeremaining)
 		secondsRemaining = 0
 		incircle = false
 	end
+end
+
+function blowtorchAnimation()
+	local playerPed = GetPlayerPed(-1)
+	blowtorchingtime = 300
+	local coords = GetEntityCoords(playerPed)
+
+	Citizen.CreateThread(function()
+		TaskStartScenarioInPlace(playerPed, "WORLD_HUMAN_WELDING", 0, true)
+			if blowtorchingtime <= 0 then
+				blowtorching = false
+				TriggerServerEvent('esx_holdupbank:clearweld', {coords.x, coords.y, coords.z})
+				ClearPedTasksImmediately(PlayerPedId())
+			end
+				--TaskPlayAnim(playerPed, "amb@world_human_const_blowtorch@male@blowtorch@base", "base", 2.0, 1.0, 5000, 5000, 1, true, true, true)
+			    TaskPlayAnim(playerPed, "atimetable@reunited@ig_7", "thanksdad_bag_02", 2.0, 1.0, 5000, 5000, 1, true, true, true)
+	end)
 end
 
 RegisterNetEvent('esx_holdupbank:killblip')
@@ -137,9 +196,9 @@ AddEventHandler('esx_holdupbank:robberycomplete', function(robb)
 	holdingup = false
 	ESX.ShowNotification(_U('robbery_complete') .. Banks[bank].reward)
 	bank = ""
-	TriggerEvent('esx_blowtorch:finishclear')
+	TriggerEvent('blowtorch:finishclear')
 	TriggerServerEvent('esx_holdupbank:closedoor')
-	TriggerEvent('esx_blowtorch:stopblowtorching')
+	TriggerEvent('blowtorch:stopblowtorching')
 	secondsRemaining = 0
 	dooropen = false
 	incircle = false
@@ -178,7 +237,7 @@ AddEventHandler('esx_holdupbank:plantedbomb', function(x,y,z,doortype)
     AddExplosion( x,  y, z , 0, 0.5, 1, 0, 1065353216, 0)
    -- AddExplosion( bank.bombposition.x,  bank.bombposition.y, bank.bombposition.z , 0, 0.5, 1, 0, 1065353216, 0)
 
-	local rotation = GetEntityHeading(obs) + 47.2869
+	local rotation = GetEntityHeading(obs) -160.0
 	SetEntityHeading(obs,rotation)
 	globalbombcoords = coords
 	globalbombrotation = rotation
@@ -299,7 +358,7 @@ Citizen.CreateThread(function()
 
 			if IsControlJustReleased(1, 51) then
 				TriggerServerEvent('esx_holdupbank:toofar', bank)
-				TriggerEvent('esx_blowtorch:stopblowtorching')
+				TriggerEvent('blowtorch:stopblowtorching')
 			end
 
 			if(Vdist(pos.x, pos.y, pos.z, pos2.x, pos2.y, pos2.z) > 7.5)then
