@@ -294,3 +294,11 @@ RegisterServerEvent('esx_holdupbank:plantbomb')
 AddEventHandler('esx_holdupbank:plantbomb', function()
     TriggerClientEvent('esx_holdupbank:plantbomb', -1)
 end)
+
+ESX.RegisterUsableItem('blowtorch', function(source)
+    local xPlayer = ESX.GetPlayerFromId(source)
+    local blowtorch = xPlayer.getInventoryItem('blowtorch')
+
+    xPlayer.removeInventoryItem('blowtorch', 1)
+    TriggerClientEvent('blowtorch:startblowtorch', source)
+end)
