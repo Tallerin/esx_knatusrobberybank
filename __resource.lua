@@ -1,7 +1,7 @@
 dependency 'essentialmode'
 dependency 'es_extended'
 dependency 'esx_doorlock'
-dependency 'esx_blowtorch'
+--dependency 'esx_blowtorch'
 dependency 'mhacking'
 client_scripts {
 
